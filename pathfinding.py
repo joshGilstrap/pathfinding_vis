@@ -53,6 +53,7 @@ class Visualizer(arcade.Window):
         self.mouse_sprite_list = []
         self.grid_nodes = []
         self.grid_list = None
+        self.active_node = None
         arcade.set_background_color(arcade.color.BLACK)
         self.set_mouse_visible(False)
         self.setup()
@@ -65,6 +66,7 @@ class Visualizer(arcade.Window):
         self.mouse_sprite_list = arcade.SpriteList()
         self.mouse_sprite_list.append(self.mouse_sprite)
         self.grid_list = arcade.SpriteList()
+        self.active_node = arcade.SpriteList()
         for i in range(DEFAULT_NUM_NODES):
             self.grid_nodes.append([])
             for j in range(DEFAULT_NUM_NODES):
@@ -83,60 +85,33 @@ class Visualizer(arcade.Window):
         self.clear()
         self.grid_list.draw()
         self.mouse_sprite_list.draw()
+        self.active_node.draw()
 
     def on_update(self, delta_time):
         node_hovered = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list)
-        node_hovered
         if node_hovered:
-            node_hovered[0].width = HOVER_MARGIN
-            node_hovered[0].height = HOVER_MARGIN
-            node_hovered[0].set_texture(1)
-            node_hovered[0].color = arcade.color.WHITE
-            # node_hovered[0].is_hovered = True
-        
-        for node in self.grid_list:
-            if (node.width == HOVER_MARGIN or node.cur_texture_index == 1):
-                node.width = NODE_WIDTH
-                node.height = NODE_HEIGHT
-                node.set_texture(0)
-                node.color = arcade.color.BLUE
-
+            temp_node = Node(NODE_WIDTH, NODE_HEIGHT, arcade.color.WHITE)
+            temp_node.set_position(node_hovered[0].center_x, node_hovered[0].center_y)
+            self.active_node = temp_node
+        for node in node_hovered:
+            node.width = NODE_WIDTH
+            node.height = NODE_HEIGHT
+            node.set_texture(0)
+            node.color = arcade.color.BLUE
+            if self.active_node is node_hovered[0]:
+                self.active_node.remove_from_sprite_lists()
         self.grid_list.update()
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE:
             arcade.exit()
 
-    def on_mouse_motion(self, x, y, delta_x, delta_y):
-        # self.mouse_sprite.center_x = x + 6
-        # self.mouse_sprite.center_y = y - 9
+    def on_mouse_motion(self, x, y):
         self.mouse_sprite.center_x = x
         self.mouse_sprite.center_y = y
-        
-        # for i in range(DEFAULT_NUM_NODES):
-        #     for j in range(DEFAULT_NUM_NODES):
-        #         node_l = self.grid_nodes[i][j].center_x - NODE_WIDTH // 2
-        #         node_r = self.grid_nodes[i][j].center_x + NODE_WIDTH // 2
-        #         node_b = self.grid_nodes[i][j].center_y - NODE_HEIGHT // 2
-        #         node_t = self.grid_nodes[i][j].center_y + NODE_HEIGHT // 2
-        #         if (x >= node_l and x <= node_r) and (y >= node_b and y <= node_t) and self.grid_nodes[i][j].width == NODE_WIDTH:
-        #             self.grid_nodes[i][j].width -= HOVER_MARGIN
-        #             self.grid_nodes[i][j].height -= HOVER_MARGIN
-        #             self.grid_nodes[i][j].set_texture(1)
-        #         if not ((x >= node_l and x <= node_r) and (y >= node_b and y <= node_t) and self.grid_nodes[i][j].texture == WHITE_TEXTURE):
-        #             self.grid_nodes[i][j].width = NODE_WIDTH
-        #             self.grid_nodes[i][j].height = NODE_HEIGHT
-        #             self.grid_nodes[i][j].set_texture(0)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        if button == arcade.MOUSE_BUTTON_LEFT:
-            if (self.is_on_node(x, y)):
-                if self.grid_nodes[i][j].texture == WHITE_TEXTURE:
-                    self.grid_nodes[i][j].set_texture(2)
-                elif self.grid_nodes[i][j].texture == GREEN_TEXTURE:
-                    self.grid_nodes[i][j].set_texture(3)
-                elif self.grid_nodes[i][j].texture == RED_TEXTURE:
-                    self.grid_nodes[i][j].set_texture(0)
+        pass
 
     def on_mouse_enter(self, x: int, y: int):
         if not self.mouse_sprite_list:
@@ -148,20 +123,14 @@ class Visualizer(arcade.Window):
 
     def is_on_node(self, x: int, y: int):
         for i in range(DEFAULT_NUM_NODES):
-                for j in range(DEFAULT_NUM_NODES):
-                    node_l = self.grid_nodes[i][j].center_x - NODE_WIDTH // 2
-                    node_r = self.grid_nodes[i][j].center_x + NODE_WIDTH // 2
-                    node_b = self.grid_nodes[i][j].center_y - NODE_HEIGHT // 2
-                    node_t = self.grid_nodes[i][j].center_y + NODE_HEIGHT // 2
-                    if (x >= node_l and x <= node_r) and (y >= node_b and y <= node_t):
-                        return True
+            for j in range(DEFAULT_NUM_NODES):
+                node_l = self.grid_nodes[i][j].center_x - NODE_WIDTH // 2
+                node_r = self.grid_nodes[i][j].center_x + NODE_WIDTH // 2
+                node_b = self.grid_nodes[i][j].center_y - NODE_HEIGHT // 2
+                node_t = self.grid_nodes[i][j].center_y + NODE_HEIGHT // 2
+                if (x >= node_l and x <= node_r) and (y >= node_b and y <= node_t):
+                    return True
         return False
-
-    # def on_mouse_drag(self, x, y, button):
-    #     if button == arcade.MOUSE_BUTTON_LEFT:
-    #         for i in range(DEFAULT_NODE_COLOR):
-    #             for j in range(DEFAULT_NODE_COLOR):
-    #                 arcade.check
                     
 
 class Node(arcade.SpriteSolidColor):
@@ -180,7 +149,9 @@ class Node(arcade.SpriteSolidColor):
         self.is_wall = False
         
         self.is_hovered = False
-        
+
+    def on_draw(self):
+        pass
 
 def main():
     Visualizer(WINDOW_WIDTH, WINDOW_HEIGHT).run()
