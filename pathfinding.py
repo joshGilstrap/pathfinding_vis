@@ -74,6 +74,8 @@ class Visualizer(arcade.Window):
         self.grid_list = arcade.SpriteList()
         self.active_node = arcade.SpriteList()
         self.wall_list = arcade.SpriteList()
+        self.start_node = arcade.SpriteList()
+        self.target_node = arcade.SpriteList()
         
         for i in range(DEFAULT_NUM_NODES):
             self.grid_nodes.append([])
@@ -95,6 +97,8 @@ class Visualizer(arcade.Window):
         self.mouse_sprite_list.draw()
         self.active_node.draw()
         self.wall_list.draw()
+        self.start_node.draw()
+        self.target_node.draw()
 
     def on_update(self, delta_time):
         node_hovered = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list)
@@ -126,7 +130,17 @@ class Visualizer(arcade.Window):
             self.active_node.kill()
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        if not self.active_node.collides_with_list(self.wall_list):
+        if button == 4 and modifiers and arcade.key.MOD_SHIFT:
+            if self.start_node:
+                self.start_node.clear()
+            self.start_node.append(self.active_node)
+            self.start_node.color = arcade.color.GREEN
+        elif button == 4 and modifiers and arcade.key.MOD_COMMAND:
+            if self.target_node:
+                self.target_node.clear()
+            self.target_node.append(self.active_node)
+            self.target_node.color = arcade.color.RED
+        elif not self.active_node.collides_with_list(self.wall_list):
             self.wall_list.append(self.active_node)
             self.wall_list.color = arcade.color.ASH_GREY
         else:
