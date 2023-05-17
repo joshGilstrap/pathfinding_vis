@@ -57,6 +57,8 @@ class Visualizer(arcade.Window):
         self.grid_list = None
         self.active_node = None
         self.wall_list = None
+        self.start_node = None
+        self.target_node = None
         arcade.set_background_color(arcade.color.BLACK)
         self.set_mouse_visible(False)
         self.setup()
@@ -126,6 +128,11 @@ class Visualizer(arcade.Window):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         if not self.active_node.collides_with_list(self.wall_list):
             self.wall_list.append(self.active_node)
+            self.wall_list.color = arcade.color.ASH_GREY
+        else:
+            for node in self.wall_list:
+                if x >= node.left and x <= node.right and y >= node.bottom and y <= node.top:
+                    self.wall_list.remove(node)
 
     def on_mouse_enter(self, x: int, y: int):
         if not self.mouse_sprite_list:
@@ -134,7 +141,12 @@ class Visualizer(arcade.Window):
     def on_mouse_leave(self, x: int, y: int):
         if self.mouse_sprite_list:
             self.mouse_sprite_list.pop()
-        # self.active_node.kill()
+    
+    def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
+        self.on_mouse_motion(x,y,dx,dy)
+        if not self.active_node.collides_with_list(self.wall_list):
+            self.wall_list.append(self.active_node)
+            self.wall_list.color = arcade.color.ASH_GREY
 
     def is_on_node(self, x: int, y: int):
         for i in range(DEFAULT_NUM_NODES):
