@@ -2,10 +2,12 @@ from random import randint
 import arcade
 
 '''WINDOW SETTINGS'''
-WINDOW_WIDTH = 800
+WINDOW_WIDTH = 610
 WINDOW_HEIGHT = 600
-WINDOW_PADDING_X = WINDOW_WIDTH * 0.05
-WINDOW_PADDING_Y = WINDOW_HEIGHT * 0.05
+WINDOW_PADDING_X_LEFT = WINDOW_WIDTH * 0.05
+WINDOW_PADDING_Y_TOP = WINDOW_HEIGHT * 0.05
+WINDOW_PADDING_X_RIGHT = WINDOW_WIDTH - WINDOW_PADDING_X_LEFT
+WINDOW_PADDING_Y_BOTTOM = WINDOW_HEIGHT - WINDOW_PADDING_Y_TOP
 
 '''NODE SETTINGS'''
 NODE_WIDTH = 20
@@ -54,12 +56,14 @@ class Visualizer(arcade.Window):
         self.grid_nodes = []
         self.grid_list = None
         self.active_node = None
+        self.wall_list = None
         arcade.set_background_color(arcade.color.BLACK)
         self.set_mouse_visible(False)
         self.setup()
 
     def setup(self):
         self.scene = arcade.Scene()
+        
         self.mouse_sprite = arcade.SpriteSolidColor(int(NODE_WIDTH*MOUSE_SPRITE_SCALING),
                                                     int(NODE_WIDTH*MOUSE_SPRITE_SCALING),
                                                     arcade.color.ORANGE)
@@ -67,12 +71,14 @@ class Visualizer(arcade.Window):
         self.mouse_sprite_list.append(self.mouse_sprite)
         self.grid_list = arcade.SpriteList()
         self.active_node = arcade.SpriteList()
+        self.wall_list = arcade.SpriteList()
+        
         for i in range(DEFAULT_NUM_NODES):
             self.grid_nodes.append([])
             for j in range(DEFAULT_NUM_NODES):
                 new_sprite = Node(NODE_WIDTH, NODE_HEIGHT, arcade.color.BLUE)
-                new_sprite.center_x = j * (NODE_WIDTH + MARGIN) + (NODE_WIDTH // 2 + MARGIN) + WINDOW_PADDING_X
-                new_sprite.center_y = i * (NODE_HEIGHT + MARGIN) + (NODE_HEIGHT // 2 + MARGIN) + WINDOW_PADDING_Y
+                new_sprite.center_x = j * (NODE_WIDTH + MARGIN) + (NODE_WIDTH // 2 + MARGIN) + WINDOW_PADDING_X_LEFT
+                new_sprite.center_y = i * (NODE_HEIGHT + MARGIN) + (NODE_HEIGHT // 2 + MARGIN) + WINDOW_PADDING_Y_TOP
                 new_sprite.default_width = new_sprite.center_x
                 new_sprite.default_height = new_sprite.center_y
                 for texture in TEXTURE_LIST:
@@ -86,6 +92,7 @@ class Visualizer(arcade.Window):
         self.grid_list.draw()
         self.mouse_sprite_list.draw()
         self.active_node.draw()
+        self.wall_list.draw()
 
     def on_update(self, delta_time):
         node_hovered = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list)
@@ -105,13 +112,20 @@ class Visualizer(arcade.Window):
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE:
             arcade.exit()
+        elif key == arcade.key.C:
+            self.wall_list.clear()
 
-    def on_mouse_motion(self, x, y):
+    def on_mouse_motion(self, x, y, delta_x, delta_y):
         self.mouse_sprite.center_x = x
         self.mouse_sprite.center_y = y
+        if x <= WINDOW_PADDING_X_LEFT or y <= WINDOW_PADDING_Y_TOP:
+            self.active_node.kill()
+        if x >= WINDOW_PADDING_X_RIGHT or y >= WINDOW_PADDING_Y_BOTTOM:
+            self.active_node.kill()
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        pass
+        if not self.active_node.collides_with_list(self.wall_list):
+            self.wall_list.append(self.active_node)
 
     def on_mouse_enter(self, x: int, y: int):
         if not self.mouse_sprite_list:
@@ -120,6 +134,7 @@ class Visualizer(arcade.Window):
     def on_mouse_leave(self, x: int, y: int):
         if self.mouse_sprite_list:
             self.mouse_sprite_list.pop()
+        # self.active_node.kill()
 
     def is_on_node(self, x: int, y: int):
         for i in range(DEFAULT_NUM_NODES):
