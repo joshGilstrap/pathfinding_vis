@@ -19,35 +19,9 @@ HOVER_MARGIN = 3
 '''SCALING'''
 MOUSE_SPRITE_SCALING = 0.5
 
-'''TEXTURES'''
-BLUE_TEXTURE = arcade.make_soft_square_texture(NODE_WIDTH,
-                                                arcade.color.BLUE,
-                                                255, 255, 'blue')
-WHITE_TEXTURE = arcade.make_soft_square_texture(NODE_WIDTH,
-                                                arcade.color.WHITE,
-                                                255, 255, 'white')
-GREEN_TEXTURE = arcade.make_soft_square_texture(NODE_WIDTH,
-                                                arcade.color.GREEN,
-                                                255, 255, 'green')
-RED_TEXTURE = arcade.make_soft_square_texture(NODE_WIDTH,
-                                              arcade.color.RED,
-                                              255, 255, 'red')
-YELLOW_TEXTURE = arcade.make_soft_square_texture(NODE_WIDTH,
-                                                 arcade.color.YELLOW,
-                                                 255, 255, 'yellow')
-ORANGE_TEXTURE = arcade.make_soft_square_texture(NODE_WIDTH,
-                                                 arcade.color.ORANGE,
-                                                 255, 255, 'orange')
-TEXTURE_LIST = [
-    BLUE_TEXTURE,
-    WHITE_TEXTURE,
-    GREEN_TEXTURE,
-    RED_TEXTURE,
-    YELLOW_TEXTURE,
-    ORANGE_TEXTURE
-]
-
 class Visualizer(arcade.Window):
+    # Initialize the window and all self variables
+    # Set background color
     def __init__(self, width, height):
         super().__init__(width, height, 'Visualizer', resizable=True)
         self.scene = None
@@ -63,6 +37,8 @@ class Visualizer(arcade.Window):
         self.set_mouse_visible(False)
         self.setup()
 
+    # Sets up scene, assigns variables context
+    # Creates grid of Nodes
     def setup(self):
         self.scene = arcade.Scene()
         
@@ -85,13 +61,12 @@ class Visualizer(arcade.Window):
                 new_sprite.center_y = i * (NODE_HEIGHT + MARGIN) + (NODE_HEIGHT // 2 + MARGIN) + WINDOW_PADDING_Y_TOP
                 new_sprite.default_width = new_sprite.center_x
                 new_sprite.default_height = new_sprite.center_y
-                for texture in TEXTURE_LIST:
-                    new_sprite.append_texture(texture)
-                new_sprite.set_texture(0)
+                new_sprite.color = arcade.color.BLUE
                 self.grid_nodes[i].append(new_sprite)
                 self.grid_list.append(new_sprite)
         self.connect_nodes()
 
+    # Draws objects on the screen
     def on_draw(self):
         self.clear()
         self.grid_list.draw()
@@ -101,6 +76,7 @@ class Visualizer(arcade.Window):
         self.target_node.draw()
         self.mouse_sprite_list.draw()
 
+    # Called every frame, updates mouse effect on grid
     def on_update(self, delta_time):
         node_hovered = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list)
         if node_hovered:
@@ -110,18 +86,23 @@ class Visualizer(arcade.Window):
         for node in node_hovered:
             node.width = NODE_WIDTH
             node.height = NODE_HEIGHT
-            node.set_texture(0)
             node.color = arcade.color.BLUE
             if self.active_node is node_hovered[0]:
                 self.active_node.remove_from_sprite_lists()
         self.grid_list.update()
 
+    # Called when a keyboard key is pressed
+    # ESC - close window
+    # C - Clear wall nodes
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE:
             arcade.exit()
         elif key == arcade.key.C:
             self.wall_list.clear()
 
+    # Called when the mouse is moved
+    # Draws mouse sprite at mouse position
+    # Removes highlighted node when mouse isn't on screen
     def on_mouse_motion(self, x, y, delta_x, delta_y):
         self.mouse_sprite.center_x = x
         self.mouse_sprite.center_y = y
@@ -130,6 +111,8 @@ class Visualizer(arcade.Window):
         if x >= WINDOW_PADDING_X_RIGHT or y >= WINDOW_PADDING_Y_BOTTOM:
             self.active_node.kill()
 
+    # Called when a mouse button is pressed, handles changing node
+    # colors and adding/removing from lists
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         if button == 4:
             if not modifiers and arcade.key.MOD_SHIFT:
@@ -156,20 +139,27 @@ class Visualizer(arcade.Window):
                     node.is_wall = False
                     self.wall_list.remove(node)
 
+    # Called when the mouse enters the window
+    # Creates mouse sprite at mouse position
     def on_mouse_enter(self, x: int, y: int):
         if not self.mouse_sprite_list:
             self.mouse_sprite_list.append(self.mouse_sprite)
 
+    # Called when the mouse leaves the frame
+    # Removes mouse sprite from screen
     def on_mouse_leave(self, x: int, y: int):
         if self.mouse_sprite_list:
             self.mouse_sprite_list.pop()
-    
+
+    # Called when the mouse is moved while clicked
+    # Adds all nodes collided with to the wall list
     def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
         self.on_mouse_motion(x,y,dx,dy)
         if not self.active_node.collides_with_list(self.wall_list):
             self.wall_list.append(self.active_node)
             self.wall_list.color = arcade.color.ASH_GREY
 
+    # Checks if the mouse is hovering over a node
     def is_on_node(self, x: int, y: int):
         for i in range(DEFAULT_NUM_NODES):
             for j in range(DEFAULT_NUM_NODES):
@@ -181,6 +171,7 @@ class Visualizer(arcade.Window):
                     return True
         return False
     
+    # Connects all nodes to their neighbors
     def connect_nodes(self):
         for i in range(0,4):
             if i == 0:
