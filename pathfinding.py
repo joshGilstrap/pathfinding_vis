@@ -68,7 +68,7 @@ class Visualizer(arcade.Window):
         
         self.mouse_sprite = arcade.SpriteSolidColor(int(NODE_WIDTH*MOUSE_SPRITE_SCALING),
                                                     int(NODE_WIDTH*MOUSE_SPRITE_SCALING),
-                                                    arcade.color.ORANGE)
+                                                    arcade.color.PURPLE)
         self.mouse_sprite_list = arcade.SpriteList()
         self.mouse_sprite_list.append(self.mouse_sprite)
         self.grid_list = arcade.SpriteList()
@@ -90,15 +90,16 @@ class Visualizer(arcade.Window):
                 new_sprite.set_texture(0)
                 self.grid_nodes[i].append(new_sprite)
                 self.grid_list.append(new_sprite)
+        self.connect_nodes()
 
     def on_draw(self):
         self.clear()
         self.grid_list.draw()
-        self.mouse_sprite_list.draw()
         self.active_node.draw()
         self.wall_list.draw()
         self.start_node.draw()
         self.target_node.draw()
+        self.mouse_sprite_list.draw()
 
     def on_update(self, delta_time):
         node_hovered = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list)
@@ -130,22 +131,29 @@ class Visualizer(arcade.Window):
             self.active_node.kill()
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        if button == 4 and modifiers and arcade.key.MOD_SHIFT:
-            if self.start_node:
-                self.start_node.clear()
-            self.start_node.append(self.active_node)
-            self.start_node.color = arcade.color.GREEN
-        elif button == 4 and modifiers and arcade.key.MOD_COMMAND:
-            if self.target_node:
-                self.target_node.clear()
-            self.target_node.append(self.active_node)
-            self.target_node.color = arcade.color.RED
+        if button == 4:
+            if not modifiers and arcade.key.MOD_SHIFT:
+                if self.start_node:
+                    self.start_node.is_start = False
+                    self.start_node.clear()
+                self.active_node.is_start = True
+                self.start_node.append(self.active_node)
+                self.start_node.color = arcade.color.GREEN
+            else:
+                if self.target_node:
+                    self.target_node.is_target = False
+                    self.target_node.clear()
+                self.active_node.is_target = True
+                self.target_node.append(self.active_node)
+                self.target_node.color = arcade.color.RED
         elif not self.active_node.collides_with_list(self.wall_list):
+            self.active_node.is_wall = True
             self.wall_list.append(self.active_node)
             self.wall_list.color = arcade.color.ASH_GREY
         else:
             for node in self.wall_list:
                 if x >= node.left and x <= node.right and y >= node.bottom and y <= node.top:
+                    node.is_wall = False
                     self.wall_list.remove(node)
 
     def on_mouse_enter(self, x: int, y: int):
@@ -172,7 +180,26 @@ class Visualizer(arcade.Window):
                 if (x >= node_l and x <= node_r) and (y >= node_b and y <= node_t):
                     return True
         return False
-                    
+    
+    def connect_nodes(self):
+        for i in range(0,4):
+            if i == 0:
+                for j in range(DEFAULT_NUM_NODES):
+                    for k in range(DEFAULT_NUM_NODES-2,-1,-1):
+                        self.grid_nodes[j][k].right_neighbor = self.grid_nodes[j][k+1]
+            elif i == 1:
+                for j in range(DEFAULT_NUM_NODES):
+                    for k in range(1,DEFAULT_NUM_NODES):
+                        self.grid_nodes[k][j].up_neighbor = self.grid_nodes[k-1][j]
+            elif i == 2:
+                for j in range(DEFAULT_NUM_NODES):
+                    for k in range(DEFAULT_NUM_NODES-2,-1,-1):
+                        self.grid_nodes[k][j].down_neighbor = self.grid_nodes[k+1][j]
+            elif i == 3:
+                for j in range(DEFAULT_NUM_NODES):
+                    for k in range(1,DEFAULT_NUM_NODES):
+                        self.grid_nodes[j][k].left_neighbor = self.grid_nodes[j][k-1]
+
 
 class Node(arcade.SpriteSolidColor):
     def __init__(self, width, height, color):
@@ -188,6 +215,7 @@ class Node(arcade.SpriteSolidColor):
         self.is_start = False
         self.is_target = False
         self.is_wall = False
+        self.checked = False
         
         self.is_hovered = False
 
