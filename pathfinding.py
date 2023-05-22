@@ -20,11 +20,9 @@ WINDOW_PADDING_Y_BOTTOM = WINDOW_HEIGHT - WINDOW_PADDING_Y_TOP
 WINDOW_TITLE = 'Pathfinding Visualizer'
 
 '''SCALING'''
-MOUSE_SPRITE_SCALING = 0.5
+MOUSE_SPRITE_SCALING = 0.4
 
 class Visualizer(arcade.View):
-    # Initialize the window and all self variables
-    # Set background color
     def __init__(self):
         super().__init__()
         self.scene = None
@@ -35,12 +33,12 @@ class Visualizer(arcade.View):
         self.grid_nodes = []
         self.grid_list = None
         
-        self.start_node_pos = None
+        # Starting node info
         self.start_node_row = None
         self.start_node_col = None
         self.start_is_active = False
         
-        self.target_node_pos = None
+        #Target node info
         self.target_node_row = None
         self.target_node_col = None
         self.target_is_active = False
@@ -54,18 +52,25 @@ class Visualizer(arcade.View):
     def setup(self):
         self.scene = arcade.Scene()
         
+        # Create small square for mouse cursor
         self.mouse_sprite = arcade.SpriteSolidColor(int(NODE_WIDTH*MOUSE_SPRITE_SCALING),
                                                     int(NODE_WIDTH*MOUSE_SPRITE_SCALING),
                                                     arcade.color.PURPLE)
         self.mouse_sprite_list = arcade.SpriteList()
         self.mouse_sprite_list.append(self.mouse_sprite)
+        
         self.grid_list = arcade.SpriteList()
         
+        # 2D grid of integers. Used to define color matrix
+        # Ex: one row of [1, 0 ,0 ,0, 2] is 
+        # [wall, open, open, open, start]
         for i in range(NUM_ROWS):
             self.grid_nodes.append([])
             for j in range(NUM_COLS):
                 self.grid_nodes[i].append(0)
         
+        # Sprite list of nodes. The sprite equivalent to
+        # self.grid_nodes, 1D array.
         pos_counter = 0
         for i in range(NUM_ROWS):
             for j in range(NUM_COLS):
@@ -77,11 +82,11 @@ class Visualizer(arcade.View):
                 self.grid_list.append(new_sprite)
         self.grid_resync()
     
+    # Update the color of the nodes
     def grid_resync(self):
         for row in range(NUM_ROWS):
             for col in range(NUM_COLS):
                 position = row * NUM_COLS + col
-                # color = self.grid_list[position].color
                 # Neutral state
                 if self.grid_nodes[row][col] == 0:
                     self.grid_list[position].color = arcade.color.BLUE
@@ -112,6 +117,7 @@ class Visualizer(arcade.View):
 
     # Called when a keyboard key is pressed
     # ESC - close window
+    # C - Clear all walls
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE:
             arcade.exit()
@@ -122,17 +128,21 @@ class Visualizer(arcade.View):
                         self.grid_nodes[i][j] = 0
             self.grid_resync()
 
+    # Make sure the mosue sprite updats with mouse movement
     def on_mouse_motion(self, x, y, delta_x, delta_y):
         self.mouse_sprite.center_x = x
         self.mouse_sprite.center_y = y
 
+    # Change single node color
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         row = int(y // (NODE_HEIGHT + MARGIN_Y))
         col = int(x // (NODE_WIDTH + MARGIN_X))
         if row >= NUM_ROWS or col >= NUM_COLS:
             return
         
+        # control-click
         if modifiers & arcade.key.MOD_ACCEL:
+            # Right click
             if button == 4:
                 self.handle_target_node_placement(row, col)
             else:    
@@ -144,6 +154,14 @@ class Visualizer(arcade.View):
             
         self.grid_resync()
     
+    # Check for three starting node cases:
+    # 1. The node isn't the start node and there is no start node,
+    #    meaning the node is now the start node
+    # 2. The node is the start node and needs to be deactivated
+    # 3. The node isn't a start node and there is a start node,
+    #    meaning the node is now the start node and the last
+    #    start node needs to be deactivated
+    # Checks in that order
     def handle_start_node_placement(self, row, col):
         if not self.start_is_active and not self.grid_nodes[row][col] == 2:
             self.start_node_row = row
@@ -166,6 +184,8 @@ class Visualizer(arcade.View):
             self.grid_nodes[row][col] = 2
             self.start_is_active = True
     
+    # Exactly the same as handle_start_node_placement but ith
+    # target
     def handle_target_node_placement(self, row, col):
         if not self.target_is_active and not self.grid_nodes[row][col] == 3:
             self.target_node_row = row
@@ -188,17 +208,23 @@ class Visualizer(arcade.View):
             self.grid_nodes[row][col] = 3
             self.target_is_active = True
 
+    # Add the mouse sprite whenever the mouse enters
+    # the view
     def on_mouse_enter(self, x: int, y: int):
         if not self.mouse_sprite_list:
             self.mouse_sprite_list.append(self.mouse_sprite)
 
+    # Kill the mouse sprite whenever the mouse exits
+    # the view
     def on_mouse_leave(self, x: int, y: int):
         if self.mouse_sprite_list:
             self.mouse_sprite_list.pop()
 
+    # Draw multiple wall nodes in a row based on clicked mouse
+    # movement. Checks with list collision and doesn't draw
+    # on start or target nodes
     def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
         self.on_mouse_motion(x,y,dx,dy)
-        # nodes_dragged = self.mouse_sprite.collides_with_list(self.grid_list)
         nodes_dragged = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list, 3)
         for node in nodes_dragged:
             x_coor = ((node.center_x) // (NODE_WIDTH + MARGIN_X))
@@ -207,17 +233,22 @@ class Visualizer(arcade.View):
             self.grid_nodes[y_coor][x_coor] = 1
         self.grid_resync()
 
-
+# Basic enter screen for view practice and ego boosting
 class StartView(arcade.View):
     def on_show_view(self):
         arcade.set_background_color(arcade.csscolor.BLUE)
     
     def on_draw(self):
         self.clear()
-        arcade.draw_text('Pathfinding Visualizer', self.window.width / 2, self.window.height / 2,
-                         arcade.color.BLACK, font_size=30, anchor_x="center")
-        arcade.draw_text('Click the mouse to begin', self.window.width / 2, self.window.height / 2-45,
-                         arcade.color.BLACK, font_size=20, anchor_x="center")
+        arcade.draw_text('PATHFINDING VISUALIZER', self.window.width / 2, self.window.height / 2,
+                         arcade.color.BLACK, font_size=50, anchor_x="center", italic=True,
+                         font_name="Kenney Pixel",)
+        arcade.draw_text('CLICK TO BEGIN', self.window.width / 2, self.window.height / 2-45,
+                         arcade.color.BLACK, font_size=40, anchor_x="center", italic=True,
+                         font_name="Kenney Pixel")
+        arcade.draw_text('AUTHOR: JOSH GILSTRAP', self.window.width / 2, self.window.height / 2 - 110,
+                         arcade.color.BLACK, font_size=30, anchor_x="center", bold=True, italic=True,
+                         font_name="Kenney Pixel")
         
     def on_mouse_press(self, x, y, button, modifiers):
         vis_view = Visualizer()
