@@ -6,12 +6,13 @@ NODE_WIDTH = 20
 NODE_HEIGHT = 20
 NUM_ROWS = 25
 NUM_COLS = 25
-MARGIN = 2
+MARGIN_X = 2
+MARGIN_Y = 2
 
 '''WINDOW SETTINGS'''
 WINDOW_GRID_BORDER = 30
-WINDOW_WIDTH = (NODE_WIDTH + MARGIN) * NUM_COLS + MARGIN
-WINDOW_HEIGHT = (NODE_HEIGHT + MARGIN) * NUM_ROWS + MARGIN
+WINDOW_WIDTH = (NODE_WIDTH + MARGIN_X) * NUM_COLS + MARGIN_X
+WINDOW_HEIGHT = (NODE_HEIGHT + MARGIN_Y) * NUM_ROWS + MARGIN_Y
 WINDOW_PADDING_X_LEFT = WINDOW_WIDTH * 0.05
 WINDOW_PADDING_Y_TOP = WINDOW_HEIGHT * 0.05
 WINDOW_PADDING_X_RIGHT = WINDOW_WIDTH - WINDOW_PADDING_X_LEFT
@@ -70,10 +71,11 @@ class Visualizer(arcade.View):
             for j in range(NUM_COLS):
                 pos_counter = pos_counter + 1
                 new_sprite = arcade.SpriteSolidColor(NODE_WIDTH, NODE_HEIGHT, arcade.color.WHITE)
-                new_sprite.center_x = j * (NODE_WIDTH + MARGIN) + (NODE_WIDTH // 2 + MARGIN)
-                new_sprite.center_y = i * (NODE_HEIGHT + MARGIN) + (NODE_HEIGHT // 2 + MARGIN)
+                new_sprite.center_x = j * (NODE_WIDTH + MARGIN_X) + (NODE_WIDTH // 2 + MARGIN_X)
+                new_sprite.center_y = i * (NODE_HEIGHT + MARGIN_Y) + (NODE_HEIGHT // 2 + MARGIN_Y)
                 new_sprite.properties[0] = pos_counter
                 self.grid_list.append(new_sprite)
+        self.grid_resync()
     
     def grid_resync(self):
         for row in range(NUM_ROWS):
@@ -113,14 +115,20 @@ class Visualizer(arcade.View):
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE:
             arcade.exit()
+        if key == arcade.key.C:
+            for i in range(NUM_ROWS):
+                for j in range(NUM_COLS):
+                    if self.grid_nodes[i][j] == 1:
+                        self.grid_nodes[i][j] = 0
+            self.grid_resync()
 
     def on_mouse_motion(self, x, y, delta_x, delta_y):
         self.mouse_sprite.center_x = x
         self.mouse_sprite.center_y = y
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        row = int(y // (NODE_HEIGHT + MARGIN))
-        col = int(x // (NODE_WIDTH + MARGIN))
+        row = int(y // (NODE_HEIGHT + MARGIN_Y))
+        col = int(x // (NODE_WIDTH + MARGIN_X))
         if row >= NUM_ROWS or col >= NUM_COLS:
             return
         
@@ -190,6 +198,14 @@ class Visualizer(arcade.View):
 
     def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
         self.on_mouse_motion(x,y,dx,dy)
+        # nodes_dragged = self.mouse_sprite.collides_with_list(self.grid_list)
+        nodes_dragged = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list, 3)
+        for node in nodes_dragged:
+            x_coor = ((node.center_x) // (NODE_WIDTH + MARGIN_X))
+            y_coor = ((node.center_y) // (NODE_HEIGHT + MARGIN_Y))
+            if self.grid_nodes[y_coor][x_coor] == 2 or self.grid_nodes[y_coor][x_coor] == 3: return
+            self.grid_nodes[y_coor][x_coor] = 1
+        self.grid_resync()
 
 
 class StartView(arcade.View):
