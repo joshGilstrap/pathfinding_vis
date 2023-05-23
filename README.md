@@ -5,5 +5,6 @@ Arcade is typically used to make arcade-style and 2D platformer games but it has
 
 
 Current operation:
+The board is set up and applicable. Development on Djikstras' algorithm will begin after the window is fully set up. Arcade Views are needing to be built and pieced together for an instruction/info pane.
 
-![current_state](https://github.com/joshGilstrap/pathfinding_vis/assets/5957735/7b829d28-2d11-4472-b223-6cf571da1913)
+![Screen Recording 2023-05-23 at 2 30 57 PM](https://github.com/joshGilstrap/pathfinding_vis/assets/5957735/cbcda521-738e-4c4a-bec1-a795dd6628d5)
