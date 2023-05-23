@@ -1,4 +1,3 @@
-# from random import randint
 import arcade
 
 '''NODE SETTINGS'''
@@ -8,15 +7,12 @@ NUM_ROWS = 25
 NUM_COLS = 25
 MARGIN_X = 2
 MARGIN_Y = 2
+HIT_BOX_LIST = [(-(NODE_WIDTH*0.4), (NODE_HEIGHT*0.4)), ((NODE_WIDTH*0.4), -(NODE_HEIGHT*0.4)),
+                ((NODE_WIDTH*0.4), (NODE_HEIGHT*0.4)), (-(NODE_WIDTH*0.4), -(NODE_HEIGHT*0.4))]
 
 '''WINDOW SETTINGS'''
-WINDOW_GRID_BORDER = 30
 WINDOW_WIDTH = (NODE_WIDTH + MARGIN_X) * NUM_COLS + MARGIN_X
 WINDOW_HEIGHT = (NODE_HEIGHT + MARGIN_Y) * NUM_ROWS + MARGIN_Y
-WINDOW_PADDING_X_LEFT = WINDOW_WIDTH * 0.05
-WINDOW_PADDING_Y_TOP = WINDOW_HEIGHT * 0.05
-WINDOW_PADDING_X_RIGHT = WINDOW_WIDTH - WINDOW_PADDING_X_LEFT
-WINDOW_PADDING_Y_BOTTOM = WINDOW_HEIGHT - WINDOW_PADDING_Y_TOP
 WINDOW_TITLE = 'Pathfinding Visualizer'
 
 '''SCALING'''
@@ -79,6 +75,7 @@ class Visualizer(arcade.View):
                 new_sprite.center_x = j * (NODE_WIDTH + MARGIN_X) + (NODE_WIDTH // 2 + MARGIN_X)
                 new_sprite.center_y = i * (NODE_HEIGHT + MARGIN_Y) + (NODE_HEIGHT // 2 + MARGIN_Y)
                 new_sprite.properties[0] = pos_counter
+                new_sprite.set_hit_box(HIT_BOX_LIST)
                 self.grid_list.append(new_sprite)
         self.grid_resync()
     
@@ -232,6 +229,7 @@ class Visualizer(arcade.View):
             if self.grid_nodes[y_coor][x_coor] == 2 or self.grid_nodes[y_coor][x_coor] == 3: return
             self.grid_nodes[y_coor][x_coor] = 1
         self.grid_resync()
+
 
 # Basic enter screen for view practice and ego boosting
 class StartView(arcade.View):
