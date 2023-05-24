@@ -4,11 +4,14 @@ import arcade
 NODE_WIDTH = 20
 NODE_HEIGHT = 20
 NUM_ROWS = 25
-NUM_COLS = 25
+NUM_COLS = 30
 MARGIN_X = 2
 MARGIN_Y = 2
-HIT_BOX_LIST = [(-(NODE_WIDTH*0.4), (NODE_HEIGHT*0.4)), ((NODE_WIDTH*0.4), -(NODE_HEIGHT*0.4)),
-                ((NODE_WIDTH*0.4), (NODE_HEIGHT*0.4)), (-(NODE_WIDTH*0.4), -(NODE_HEIGHT*0.4))]
+HIT_BOX_SCALING = 0.4
+HIT_BOX_LIST = [(-(NODE_WIDTH*HIT_BOX_SCALING), (NODE_HEIGHT*HIT_BOX_SCALING)),
+                ((NODE_WIDTH*HIT_BOX_SCALING), -(NODE_HEIGHT*HIT_BOX_SCALING)),
+                ((NODE_WIDTH*HIT_BOX_SCALING), (NODE_HEIGHT*HIT_BOX_SCALING)),
+                (-(NODE_WIDTH*HIT_BOX_SCALING), -(NODE_HEIGHT*HIT_BOX_SCALING))]
 
 '''WINDOW SETTINGS'''
 WINDOW_WIDTH = (NODE_WIDTH + MARGIN_X) * NUM_COLS + MARGIN_X
@@ -219,7 +222,7 @@ class Visualizer(arcade.View):
 
     # Draw multiple wall nodes in a row based on clicked mouse
     # movement. Checks with list collision and doesn't draw
-    # on start or target nodes
+    # on start or target nodes. Holding shift removes walls
     def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
         self.on_mouse_motion(x,y,dx,dy)
         nodes_dragged = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list, 3)
@@ -227,7 +230,11 @@ class Visualizer(arcade.View):
             x_coor = ((node.center_x) // (NODE_WIDTH + MARGIN_X))
             y_coor = ((node.center_y) // (NODE_HEIGHT + MARGIN_Y))
             if self.grid_nodes[y_coor][x_coor] == 2 or self.grid_nodes[y_coor][x_coor] == 3: return
-            self.grid_nodes[y_coor][x_coor] = 1
+            if modifiers & arcade.key.MOD_SHIFT:
+                self.grid_nodes[y_coor][x_coor] = 0
+            elif not modifiers:
+                self.grid_nodes[y_coor][x_coor] = 1
+                
         self.grid_resync()
 
 
