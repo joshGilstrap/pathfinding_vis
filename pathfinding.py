@@ -4,9 +4,9 @@ import arcade
 NODE_WIDTH = 20
 NODE_HEIGHT = 20
 NUM_ROWS = 25
-NUM_COLS = 30
-MARGIN_X = 2
-MARGIN_Y = 2
+NUM_COLS = 35
+MARGIN_X = NODE_WIDTH // 10
+MARGIN_Y = NODE_HEIGHT // 10
 HIT_BOX_SCALING = 0.4
 HIT_BOX_LIST = [(-(NODE_WIDTH*HIT_BOX_SCALING), (NODE_HEIGHT*HIT_BOX_SCALING)),
                 ((NODE_WIDTH*HIT_BOX_SCALING), -(NODE_HEIGHT*HIT_BOX_SCALING)),
@@ -33,11 +33,13 @@ class Visualizer(arcade.View):
         self.grid_list = None
         
         # Starting node info
+        self.start_node = None
         self.start_node_row = None
         self.start_node_col = None
         self.start_is_active = False
         
         #Target node info
+        self.target_node = None
         self.target_node_row = None
         self.target_node_col = None
         self.target_is_active = False
@@ -61,8 +63,8 @@ class Visualizer(arcade.View):
         self.grid_list = arcade.SpriteList()
         
         # 2D grid of integers. Used to define color matrix
-        # Ex: one row of [1, 0 ,0 ,0, 2] is 
-        # [wall, open, open, open, start]
+        # Ex: one row of [3, 0 ,1 ,0, 2] is 
+        # [target, open, wall, open, start]
         for i in range(NUM_ROWS):
             self.grid_nodes.append([])
             for j in range(NUM_COLS):
@@ -77,9 +79,13 @@ class Visualizer(arcade.View):
                 new_sprite = arcade.SpriteSolidColor(NODE_WIDTH, NODE_HEIGHT, arcade.color.WHITE)
                 new_sprite.center_x = j * (NODE_WIDTH + MARGIN_X) + (NODE_WIDTH // 2 + MARGIN_X)
                 new_sprite.center_y = i * (NODE_HEIGHT + MARGIN_Y) + (NODE_HEIGHT // 2 + MARGIN_Y)
-                new_sprite.properties[0] = pos_counter
+                new_sprite.properties['id'] = pos_counter
+                # (up), (right), (down), (left)
+                new_sprite.properties['neighbors'] = [None,None,None,None]
+                new_sprite.properties['parent'] = None
                 new_sprite.set_hit_box(HIT_BOX_LIST)
                 self.grid_list.append(new_sprite)
+        self.connect_neighbors()
         self.grid_resync()
     
     # Update the color of the nodes
@@ -96,9 +102,11 @@ class Visualizer(arcade.View):
                 # Starting node
                 if self.grid_nodes[row][col] == 2:
                     self.grid_list[position].color = arcade.color.GREEN
+                    self.start_node = self.grid_list[position]
                 # Target node
                 if self.grid_nodes[row][col] == 3:
                     self.grid_list[position].color = arcade.color.RED
+                    self.target_node = self.grid_list[position]
                 # Node being searched
                 if self.grid_nodes[row][col] == 4:
                     self.grid_list[position].color = arcade.color.ORANGE
@@ -175,6 +183,7 @@ class Visualizer(arcade.View):
                         self.grid_nodes[temp_row][temp_col] == 0;
             self.grid_nodes[row][col] = 0
             self.start_is_active = False
+            self.start_node = None
         else:
             temp_row = self.start_node_row
             temp_col = self.start_node_col
@@ -199,6 +208,7 @@ class Visualizer(arcade.View):
                         self.grid_nodes[temp_row][temp_col] == 0;
             self.grid_nodes[row][col] = 0
             self.target_is_active = False
+            self.target_node = None
         else:
             temp_row = self.target_node_row
             temp_col = self.target_node_col
@@ -234,15 +244,41 @@ class Visualizer(arcade.View):
                 self.grid_nodes[y_coor][x_coor] = 0
             elif not modifiers:
                 self.grid_nodes[y_coor][x_coor] = 1
-                
         self.grid_resync()
+
+    # Connect the nodes to each other. Four clamps in place
+    # to account for edges and corners
+    def connect_neighbors(self):
+        for _, node in enumerate(self.grid_list):
+            # Right neighbor
+            if node.properties['id'] % NUM_COLS == 0:
+                node.properties['neighbors'][1] = None
+            else:
+                node.properties['neighbors'][1] = self.grid_list[node.properties['id']]
+            
+            # Left neighbor
+            if (node.properties['id'] - 1) % NUM_COLS == 0:
+                node.properties['neighbors'][3] = None
+            else:
+                node.properties['neighbors'][3] = self.grid_list[node.properties['id'] - 2]
+            
+            # Up neighbor
+            if (NUM_COLS + node.properties['id']) > (NUM_COLS * NUM_ROWS):
+                node.properties['neighbors'][0] = None
+            else:
+                node.properties['neighbors'][0] = self.grid_list[(NUM_COLS + node.properties['id']) - 1]
+            
+            # Down neighbor
+            if node.properties['id'] - NUM_COLS <= 0:
+                node.properties['neighbors'][2] = None
+            else:
+                node.properties['neighbors'][2] = self.grid_list[(node.properties['id'] - NUM_COLS) - 1]
 
 
 # Basic enter screen for view practice and ego boosting
 class StartView(arcade.View):
     def on_show_view(self):
         arcade.set_background_color(arcade.csscolor.BLUE)
-    
     def on_draw(self):
         self.clear()
         arcade.draw_text('PATHFINDING VISUALIZER', self.window.width / 2, self.window.height / 2,
