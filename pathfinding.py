@@ -44,6 +44,11 @@ class Visualizer(arcade.View):
         self.target_node_col = None
         self.target_is_active = False
         
+        #Pathfinding info
+        self.check_next_list = None
+        self.nodes_to_check = None
+        self.done_list = None
+        
         arcade.set_background_color(arcade.color.BLACK)
         self.window.set_mouse_visible(False)
         self.setup()
@@ -61,6 +66,9 @@ class Visualizer(arcade.View):
         self.mouse_sprite_list.append(self.mouse_sprite)
         
         self.grid_list = arcade.SpriteList()
+        self.check_next_list = arcade.SpriteList()
+        self.nodes_to_check = arcade.SpriteList()
+        self.done_list = arcade.SpriteList()
         
         # 2D grid of integers. Used to define color matrix
         # Ex: one row of [3, 0 ,1 ,0, 2] is 
@@ -87,6 +95,14 @@ class Visualizer(arcade.View):
                 self.grid_list.append(new_sprite)
         self.connect_neighbors()
         self.grid_resync()
+    
+    # def on_update(self):
+    #     self.grid_list.update()
+    #     self.grid_resync()
+    
+    def on_update(self, delta_time: float):
+        self.grid_resync()
+        arcade.window_commands.finish_render()
     
     # Update the color of the nodes
     def grid_resync(self):
@@ -120,12 +136,15 @@ class Visualizer(arcade.View):
     # Draws objects on the screen
     def on_draw(self):
         self.clear()
+        self.grid_resync()
         self.grid_list.draw()
         self.mouse_sprite_list.draw()
+        arcade.window_commands.finish_render()
 
     # Called when a keyboard key is pressed
     # ESC - close window
     # C - Clear all walls
+    # D - Dijkstra
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE:
             arcade.exit()
@@ -134,6 +153,9 @@ class Visualizer(arcade.View):
                 for j in range(NUM_COLS):
                     if self.grid_nodes[i][j] == 1:
                         self.grid_nodes[i][j] = 0
+            self.grid_resync()
+        if key == arcade.key.D:
+            self.dijkstra_search()
             self.grid_resync()
 
     # Make sure the mosue sprite updats with mouse movement
@@ -273,6 +295,45 @@ class Visualizer(arcade.View):
                 node.properties['neighbors'][2] = None
             else:
                 node.properties['neighbors'][2] = self.grid_list[(node.properties['id'] - NUM_COLS) - 1]
+
+    def dijkstra_search(self):
+        if not self.start_is_active or not self.target_is_active:
+            return
+        current_node = self.start_node
+        self.check_next_list.append(current_node)
+        nodes_checked = 0
+        target_found = False
+        while not target_found:
+            for i in range(4):
+                if not current_node.properties['neighbors'][i] == None:
+                    if current_node.properties['neighbors'][i] in self.done_list: continue
+                    if current_node.properties['neighbors'][i] in self.check_next_list: continue
+                    if current_node.properties['neighbors'][i] in self.nodes_to_check: continue
+                    self.nodes_to_check.append(current_node.properties['neighbors'][i])
+                    x = self.nodes_to_check[0].center_x // (NODE_WIDTH + MARGIN_X)
+                    y = self.nodes_to_check[0].center_y // (NODE_HEIGHT + MARGIN_Y)
+                    self.grid_nodes[y][x] = 4
+                    self.on_draw()
+            while len(self.nodes_to_check) > 0:
+                if self.nodes_to_check[0].properties['id'] == (NUM_COLS*NUM_ROWS): break
+                if self.nodes_to_check[0] in self.done_list:
+                    self.nodes_to_check.remove(self.nodes_to_check[0])
+                    continue
+                if not self.nodes_to_check[0] == self.target_node:
+                    x_coor = ((self.nodes_to_check[0].center_x) // (NODE_WIDTH + MARGIN_X))
+                    y_coor = ((self.nodes_to_check[0].center_y) // (NODE_HEIGHT + MARGIN_Y))
+                    self.grid_nodes[y_coor][x_coor] = 6
+                    self.check_next_list.append(self.nodes_to_check[0])
+                    self.nodes_to_check.remove(self.nodes_to_check[0])
+                    nodes_checked = nodes_checked + 1
+                    self.on_draw()
+                else:
+                    target_found = True
+                    break
+            self.done_list.append(current_node)
+            self.check_next_list.remove(self.check_next_list[0])
+            current_node = self.check_next_list[0]
+            self.nodes_to_check.clear()
 
 
 # Basic enter screen for view practice and ego boosting
