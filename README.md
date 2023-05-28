@@ -5,9 +5,11 @@ Arcade is typically used to make arcade-style and 2D platformer games but it has
 
 
 Current operation:
-The board is set up and Dijkstra's algorithm v1 is implemented. You can choose your starting and target nodes, walls can be built but
-have no effect yet. Visual bugs need squished.
+Dijkstra's algorithm is fully implemented. Walls are obstructive, a path is recorded and drawn. I'll call this officially v1.0. Still needs quite
+a few cosmetics and tests
 
-![Screen Recording 2023-05-26 at 8 52 30 AM](https://github.com/joshGilstrap/pathfinding_vis/assets/5957735/81a882a6-fe24-4732-adca-37af300a2800)
 
-Test of algorithm
+![0528 (1)](https://github.com/joshGilstrap/pathfinding_vis/assets/5957735/94655a5f-73b8-4666-a18b-32695a0fe10b)
+
+
+Pathfinding example
