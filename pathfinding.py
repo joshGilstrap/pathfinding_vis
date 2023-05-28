@@ -1,10 +1,11 @@
+from copy import deepcopy
 import arcade
 
 '''NODE SETTINGS'''
 NODE_WIDTH = 20
 NODE_HEIGHT = 20
 NUM_ROWS = 25
-NUM_COLS = 35
+NUM_COLS = 25
 MARGIN_X = NODE_WIDTH // 10
 MARGIN_Y = NODE_HEIGHT // 10
 HIT_BOX_SCALING = 0.4
@@ -12,6 +13,8 @@ HIT_BOX_LIST = [(-(NODE_WIDTH*HIT_BOX_SCALING), (NODE_HEIGHT*HIT_BOX_SCALING)),
                 ((NODE_WIDTH*HIT_BOX_SCALING), -(NODE_HEIGHT*HIT_BOX_SCALING)),
                 ((NODE_WIDTH*HIT_BOX_SCALING), (NODE_HEIGHT*HIT_BOX_SCALING)),
                 (-(NODE_WIDTH*HIT_BOX_SCALING), -(NODE_HEIGHT*HIT_BOX_SCALING))]
+INFINITY = (NUM_COLS*NUM_ROWS)
+WALL_VALUE = INFINITY + 1
 
 '''WINDOW SETTINGS'''
 WINDOW_WIDTH = (NODE_WIDTH + MARGIN_X) * NUM_COLS + MARGIN_X
@@ -61,7 +64,7 @@ class Visualizer(arcade.View):
         # Create small square for mouse cursor
         self.mouse_sprite = arcade.SpriteSolidColor(int(NODE_WIDTH*MOUSE_SPRITE_SCALING),
                                                     int(NODE_WIDTH*MOUSE_SPRITE_SCALING),
-                                                    arcade.color.PURPLE)
+                                                    arcade.color.WHITE)
         self.mouse_sprite_list = arcade.SpriteList()
         self.mouse_sprite_list.append(self.mouse_sprite)
         
@@ -91,6 +94,7 @@ class Visualizer(arcade.View):
                 # (up), (right), (down), (left)
                 new_sprite.properties['neighbors'] = [None,None,None,None]
                 new_sprite.properties['parent'] = None
+                new_sprite.properties['distance'] = INFINITY
                 new_sprite.set_hit_box(HIT_BOX_LIST)
                 self.grid_list.append(new_sprite)
         self.connect_neighbors()
@@ -102,19 +106,19 @@ class Visualizer(arcade.View):
     
     def on_update(self, delta_time: float):
         self.grid_resync()
-        arcade.window_commands.finish_render()
     
     # Update the color of the nodes
     def grid_resync(self):
         for row in range(NUM_ROWS):
             for col in range(NUM_COLS):
                 position = row * NUM_COLS + col
+                if position >= (NUM_ROWS*NUM_COLS): break
                 # Neutral state
                 if self.grid_nodes[row][col] == 0:
                     self.grid_list[position].color = arcade.color.BLUE
                 # Obstacle
                 if self.grid_nodes[row][col] == 1:
-                    self.grid_list[position].color = arcade.color.ASH_GREY
+                    self.grid_list[position].color = arcade.color.GRAY
                 # Starting node
                 if self.grid_nodes[row][col] == 2:
                     self.grid_list[position].color = arcade.color.GREEN
@@ -171,6 +175,7 @@ class Visualizer(arcade.View):
             return
         
         # control-click
+        pos = row * NUM_COLS + col
         if modifiers & arcade.key.MOD_ACCEL:
             # Right click
             if button == 4:
@@ -179,9 +184,30 @@ class Visualizer(arcade.View):
                 self.handle_start_node_placement(row, col)
         elif self.grid_nodes[row][col] == 0:
             self.grid_nodes[row][col] = 1
+            self.grid_list[pos].properties['distance'] = INFINITY
         elif self.grid_nodes[row][col] == 1:
             self.grid_nodes[row][col] = 0
+            self.grid_list[pos].properties['distance'] = WALL_VALUE
             
+        self.grid_resync()
+    
+    # Draw multiple wall nodes in a row based on clicked mouse
+    # movement. Checks with list collision and doesn't draw
+    # on start or target nodes. Holding shift removes walls
+    def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
+        self.on_mouse_motion(x,y,dx,dy)
+        nodes_dragged = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list, 3)
+        for node in nodes_dragged:
+            x_coor = ((node.center_x) // (NODE_WIDTH + MARGIN_X))
+            y_coor = ((node.center_y) // (NODE_HEIGHT + MARGIN_Y))
+            pos = y_coor * NUM_COLS + x_coor
+            if self.grid_nodes[y_coor][x_coor] == 2 or self.grid_nodes[y_coor][x_coor] == 3: return
+            if modifiers & arcade.key.MOD_ALT:
+                self.grid_nodes[y_coor][x_coor] = 0
+                self.grid_list[pos].properties['distance'] = INFINITY
+            else:
+                self.grid_nodes[y_coor][x_coor] = 1
+                self.grid_list[pos].properties['distance'] = WALL_VALUE
         self.grid_resync()
     
     # Check for three starting node cases:
@@ -227,7 +253,7 @@ class Visualizer(arcade.View):
             for temp_row in range(NUM_ROWS):
                 for temp_col in range(NUM_COLS):
                     if self.grid_nodes[temp_row][temp_col] == 3:
-                        self.grid_nodes[temp_row][temp_col] == 0;
+                        self.grid_nodes[temp_row][temp_col] == 0
             self.grid_nodes[row][col] = 0
             self.target_is_active = False
             self.target_node = None
@@ -251,22 +277,6 @@ class Visualizer(arcade.View):
     def on_mouse_leave(self, x: int, y: int):
         if self.mouse_sprite_list:
             self.mouse_sprite_list.pop()
-
-    # Draw multiple wall nodes in a row based on clicked mouse
-    # movement. Checks with list collision and doesn't draw
-    # on start or target nodes. Holding shift removes walls
-    def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
-        self.on_mouse_motion(x,y,dx,dy)
-        nodes_dragged = arcade.check_for_collision_with_list(self.mouse_sprite, self.grid_list, 3)
-        for node in nodes_dragged:
-            x_coor = ((node.center_x) // (NODE_WIDTH + MARGIN_X))
-            y_coor = ((node.center_y) // (NODE_HEIGHT + MARGIN_Y))
-            if self.grid_nodes[y_coor][x_coor] == 2 or self.grid_nodes[y_coor][x_coor] == 3: return
-            if modifiers & arcade.key.MOD_SHIFT:
-                self.grid_nodes[y_coor][x_coor] = 0
-            elif not modifiers:
-                self.grid_nodes[y_coor][x_coor] = 1
-        self.grid_resync()
 
     # Connect the nodes to each other. Four clamps in place
     # to account for edges and corners
@@ -300,40 +310,54 @@ class Visualizer(arcade.View):
         if not self.start_is_active or not self.target_is_active:
             return
         current_node = self.start_node
-        self.check_next_list.append(current_node)
+        current_node.properties['distance'] = 0
         nodes_checked = 0
         target_found = False
-        while not target_found:
+        while not target_found or nodes_checked < len(self.grid_list):
             for i in range(4):
                 if not current_node.properties['neighbors'][i] == None:
                     if current_node.properties['neighbors'][i] in self.done_list: continue
                     if current_node.properties['neighbors'][i] in self.check_next_list: continue
                     if current_node.properties['neighbors'][i] in self.nodes_to_check: continue
-                    self.nodes_to_check.append(current_node.properties['neighbors'][i])
-                    x = self.nodes_to_check[0].center_x // (NODE_WIDTH + MARGIN_X)
-                    y = self.nodes_to_check[0].center_y // (NODE_HEIGHT + MARGIN_Y)
-                    self.grid_nodes[y][x] = 4
+                    if current_node.properties['neighbors'][i].properties['distance'] == INFINITY:
+                        current_node.properties['neighbors'][i].properties['distance'] = current_node.properties['distance'] + 1
+                        current_node.properties['neighbors'][i].properties['parent'] = current_node
+                        self.nodes_to_check.append(current_node.properties['neighbors'][i])
+                        x = current_node.properties['neighbors'][i].center_x // (NODE_WIDTH + MARGIN_X)
+                        y = current_node.properties['neighbors'][i].center_y // (NODE_HEIGHT + MARGIN_Y)
+                        self.grid_nodes[y][x] = 4
+                    elif current_node.properties['neighbors'][i].properties['distance'] == WALL_VALUE:
+                        continue
+                    elif (current_node.properties['neighbors'][i].properties['distance'] >= 
+                        current_node.properties['distance'] + current_node.properties['neighbors'][i].properties['distance']):
+                        current_node.properties['neighbors'][i].properties['distance'] = (current_node.properties['distance'] + 
+                                                                                          current_node.properties['neighbors'][i].properties['distance'])
+                        current_node.properties['neighbors'][i].properties['parent'] = current_node
+                        self.nodes_to_check.append(current_node.properties['neighbors'][i])
+                        x = current_node.properties['neighbors'][i].center_x // (NODE_WIDTH + MARGIN_X)
+                        y = current_node.properties['neighbors'][i].center_y // (NODE_HEIGHT + MARGIN_Y)
+                        self.grid_nodes[y][x] = 4
+                    self.nodes_to_check.sort(key=lambda x: x.properties['distance'])
+            self.on_draw()
+            if self.target_node in self.nodes_to_check:
+                node = self.target_node
+                while not node is self.start_node:
+                    x = node.center_x // (NODE_WIDTH + MARGIN_X)
+                    y = node.center_y // (NODE_HEIGHT + MARGIN_Y)
+                    self.grid_nodes[y][x] = 5
+                    node = node.properties['parent']
                     self.on_draw()
-            while len(self.nodes_to_check) > 0:
-                if self.nodes_to_check[0].properties['id'] == (NUM_COLS*NUM_ROWS): break
-                if self.nodes_to_check[0] in self.done_list:
-                    self.nodes_to_check.remove(self.nodes_to_check[0])
-                    continue
-                if not self.nodes_to_check[0] == self.target_node:
-                    x_coor = ((self.nodes_to_check[0].center_x) // (NODE_WIDTH + MARGIN_X))
-                    y_coor = ((self.nodes_to_check[0].center_y) // (NODE_HEIGHT + MARGIN_Y))
-                    self.grid_nodes[y_coor][x_coor] = 6
-                    self.check_next_list.append(self.nodes_to_check[0])
-                    self.nodes_to_check.remove(self.nodes_to_check[0])
-                    nodes_checked = nodes_checked + 1
-                    self.on_draw()
-                else:
-                    target_found = True
-                    break
+                target_found = True
+                break
             self.done_list.append(current_node)
-            self.check_next_list.remove(self.check_next_list[0])
-            current_node = self.check_next_list[0]
-            self.nodes_to_check.clear()
+            for node in self.nodes_to_check:
+                x_coor = ((node.center_x) // (NODE_WIDTH + MARGIN_X))
+                y_coor = ((node.center_y) // (NODE_HEIGHT + MARGIN_Y))
+                self.grid_nodes[y_coor][x_coor] = 6
+            self.on_draw()
+            nodes_checked += 1
+            current_node = self.nodes_to_check[0]
+            self.nodes_to_check.remove(self.nodes_to_check[0])
 
 
 # Basic enter screen for view practice and ego boosting
@@ -343,13 +367,13 @@ class StartView(arcade.View):
     def on_draw(self):
         self.clear()
         arcade.draw_text('PATHFINDING VISUALIZER', self.window.width / 2, self.window.height / 2,
-                         arcade.color.BLACK, font_size=50, anchor_x="center", italic=True,
+                         arcade.color.BLACK, font_size=50, anchor_x="center",
                          font_name="Kenney Pixel",)
         arcade.draw_text('CLICK TO BEGIN', self.window.width / 2, self.window.height / 2-45,
-                         arcade.color.BLACK, font_size=40, anchor_x="center", italic=True,
+                         arcade.color.BLACK, font_size=40, anchor_x="center",
                          font_name="Kenney Pixel")
         arcade.draw_text('AUTHOR: JOSH GILSTRAP', self.window.width / 2, self.window.height / 2 - 110,
-                         arcade.color.BLACK, font_size=30, anchor_x="center", bold=True, italic=True,
+                         arcade.color.BLACK, font_size=30, anchor_x="center", bold=True,
                          font_name="Kenney Pixel")
         
     def on_mouse_press(self, x, y, button, modifiers):

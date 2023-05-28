@@ -1,2 +1,7 @@
 assets
 env
+/Lib
+/Scripts
+/Include
+/.vscode
+pyvenv.cfg
