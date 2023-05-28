@@ -1,11 +1,10 @@
-from copy import deepcopy
 import arcade
 
 '''NODE SETTINGS'''
-NODE_WIDTH = 20
-NODE_HEIGHT = 20
-NUM_ROWS = 25
-NUM_COLS = 25
+NODE_WIDTH = 10
+NODE_HEIGHT = 10
+NUM_ROWS = 51
+NUM_COLS = 91
 MARGIN_X = NODE_WIDTH // 10
 MARGIN_Y = NODE_HEIGHT // 10
 HIT_BOX_SCALING = 0.4
@@ -100,10 +99,6 @@ class Visualizer(arcade.View):
         self.connect_neighbors()
         self.grid_resync()
     
-    # def on_update(self):
-    #     self.grid_list.update()
-    #     self.grid_resync()
-    
     def on_update(self, delta_time: float):
         self.grid_resync()
     
@@ -184,10 +179,10 @@ class Visualizer(arcade.View):
                 self.handle_start_node_placement(row, col)
         elif self.grid_nodes[row][col] == 0:
             self.grid_nodes[row][col] = 1
-            self.grid_list[pos].properties['distance'] = INFINITY
+            self.grid_list[pos].properties['distance'] = WALL_VALUE
         elif self.grid_nodes[row][col] == 1:
             self.grid_nodes[row][col] = 0
-            self.grid_list[pos].properties['distance'] = WALL_VALUE
+            self.grid_list[pos].properties['distance'] = INFINITY
             
         self.grid_resync()
     
@@ -340,7 +335,8 @@ class Visualizer(arcade.View):
                     self.nodes_to_check.sort(key=lambda x: x.properties['distance'])
             self.on_draw()
             if self.target_node in self.nodes_to_check:
-                node = self.target_node
+                self.grid_nodes[self.target_node_row][self.target_node_col] = 3
+                node = self.target_node.properties['parent']
                 while not node is self.start_node:
                     x = node.center_x // (NODE_WIDTH + MARGIN_X)
                     y = node.center_y // (NODE_HEIGHT + MARGIN_Y)
