@@ -1,3 +1,4 @@
+from math import sqrt
 import arcade
 
 '''NODE SETTINGS'''
@@ -51,6 +52,9 @@ class Visualizer(arcade.View):
         self.nodes_to_check = None
         self.done_list = None
         
+        self.instruction_panel = InstructionView(0, arcade.get_viewport()[3] - NODE_HEIGHT - 5,
+                                                 arcade.get_viewport()[1], NODE_HEIGHT, accept_keyboard_events={False})
+        
         arcade.set_background_color(arcade.color.BLACK)
         self.window.set_mouse_visible(False)
         self.setup()
@@ -59,6 +63,7 @@ class Visualizer(arcade.View):
     # Creates grid of Nodes
     def setup(self):
         self.scene = arcade.Scene()
+        # self.section_manager.add_section(self.instruction_panel)
         
         # Create small square for mouse cursor
         self.mouse_sprite = arcade.SpriteSolidColor(int(NODE_WIDTH*MOUSE_SPRITE_SCALING),
@@ -73,7 +78,8 @@ class Visualizer(arcade.View):
         self.done_list = arcade.SpriteList()
         
         # 2D grid of integers. Used to define color matrix
-        # Ex: one row of [3, 0 ,1 ,0, 2] is 
+        # Ex: one row of [3, 0 ,1 ,0, 2] is
+        # [RED, BLUE, GRAY, BLUE, GREEN] is 
         # [target, open, wall, open, start]
         for i in range(NUM_ROWS):
             self.grid_nodes.append([])
@@ -94,10 +100,12 @@ class Visualizer(arcade.View):
                 new_sprite.properties['neighbors'] = [None,None,None,None]
                 new_sprite.properties['parent'] = None
                 new_sprite.properties['distance'] = INFINITY
+                new_sprite.properties['dist_to_target'] = INFINITY
                 new_sprite.set_hit_box(HIT_BOX_LIST)
                 self.grid_list.append(new_sprite)
         self.connect_neighbors()
         self.grid_resync()
+    
     
     def on_update(self, delta_time: float):
         self.grid_resync()
@@ -131,12 +139,16 @@ class Visualizer(arcade.View):
                 # Searched/not part of path
                 if self.grid_nodes[row][col] == 6:
                     self.grid_list[position].color = arcade.color.DARK_BLUE
+                # No path available
+                if self.grid_nodes[row][col] == 7:
+                    self.grid_list[position].color = arcade.color.BLACK
 
     # Draws objects on the screen
     def on_draw(self):
         self.clear()
         self.grid_resync()
         self.grid_list.draw()
+        # self.instruction_panel.on_draw()
         self.mouse_sprite_list.draw()
         arcade.window_commands.finish_render()
 
@@ -152,10 +164,21 @@ class Visualizer(arcade.View):
                 for j in range(NUM_COLS):
                     if self.grid_nodes[i][j] == 1:
                         self.grid_nodes[i][j] = 0
+                        pos = (i) * NUM_COLS + (j)
+                        self.grid_list[pos].properties['distance'] = INFINITY
             self.grid_resync()
+            return
         if key == arcade.key.D:
             self.dijkstra_search()
             self.grid_resync()
+            return
+        if key == arcade.key.A:
+            self.a_star_search()
+            self.grid_resync()
+            return
+        if key == arcade.key.R:
+            self.__init__()
+            return
 
     # Make sure the mosue sprite updats with mouse movement
     def on_mouse_motion(self, x, y, delta_x, delta_y):
@@ -300,6 +323,9 @@ class Visualizer(arcade.View):
                 node.properties['neighbors'][2] = None
             else:
                 node.properties['neighbors'][2] = self.grid_list[(node.properties['id'] - NUM_COLS) - 1]
+    
+    def calc_dist(self, node1, node2):
+        return sqrt(pow((node1.center_x-node2.center_x), 2) + pow((node1.center_y-node2.center_y), 2))
 
     def dijkstra_search(self):
         if not self.start_is_active or not self.target_is_active:
@@ -307,8 +333,11 @@ class Visualizer(arcade.View):
         current_node = self.start_node
         current_node.properties['distance'] = 0
         nodes_checked = 0
+        
         target_found = False
         while not target_found or nodes_checked < len(self.grid_list):
+            # Check all neighbors of current node. Skip if already done or if current distance
+            # is smaller than potential distance.
             for i in range(4):
                 if not current_node.properties['neighbors'][i] == None:
                     if current_node.properties['neighbors'][i] in self.done_list: continue
@@ -334,8 +363,12 @@ class Visualizer(arcade.View):
                         self.grid_nodes[y][x] = 4
                     self.nodes_to_check.sort(key=lambda x: x.properties['distance'])
             self.on_draw()
+            
+            # Check if the target node is a neighbor
             if self.target_node in self.nodes_to_check:
+                # Set target node color back to red
                 self.grid_nodes[self.target_node_row][self.target_node_col] = 3
+                # Start trail at node before target
                 node = self.target_node.properties['parent']
                 while not node is self.start_node:
                     x = node.center_x // (NODE_WIDTH + MARGIN_X)
@@ -345,6 +378,12 @@ class Visualizer(arcade.View):
                     self.on_draw()
                 target_found = True
                 break
+            # Check if we've run out of nodes
+            elif len(self.nodes_to_check) == 0:
+                self.grid_nodes[self.target_node_row][self.target_node_col] = 7
+                self.grid_nodes[self.start_node_row][self.start_node_col] = 7
+                break
+            
             self.done_list.append(current_node)
             for node in self.nodes_to_check:
                 x_coor = ((node.center_x) // (NODE_WIDTH + MARGIN_X))
@@ -355,6 +394,70 @@ class Visualizer(arcade.View):
             current_node = self.nodes_to_check[0]
             self.nodes_to_check.remove(self.nodes_to_check[0])
 
+    def a_star_search(self):
+        if not self.start_is_active or not self.target_is_active:
+            return
+        for node in self.grid_list:
+            node.properties['dist_to_target'] = self.calc_dist(node, self.target_node)
+        current_node = self.start_node
+        current_node.properties['distance'] = 0
+        
+        target_reached = False
+        while not target_reached:
+            for i in range(4):
+                if not current_node.properties['neighbors'][i] == None:
+                    if current_node.properties['neighbors'][i] in self.done_list: continue
+                    if current_node.properties['neighbors'][i] in self.nodes_to_check: continue
+                    if current_node.properties['neighbors'][i].properties['distance'] == INFINITY:
+                        current_node.properties['neighbors'][i].properties['distance'] = current_node.properties['distance'] + 1
+                        current_node.properties['neighbors'][i].properties['parent'] = current_node
+                        self.nodes_to_check.append(current_node.properties['neighbors'][i])
+                        x = current_node.properties['neighbors'][i].center_x // (NODE_WIDTH + MARGIN_X)
+                        y = current_node.properties['neighbors'][i].center_y // (NODE_HEIGHT + MARGIN_Y)
+                        self.grid_nodes[y][x] = 4
+                    elif current_node.properties['neighbors'][i].properties['distance'] == WALL_VALUE:
+                        continue
+                    elif (current_node.properties['neighbors'][i].properties['distance'] >= 
+                        current_node.properties['distance'] + current_node.properties['neighbors'][i].properties['distance']):
+                        current_node.properties['neighbors'][i].properties['distance'] = (current_node.properties['distance'] + 
+                                                                                          current_node.properties['neighbors'][i].properties['distance'])
+                        current_node.properties['neighbors'][i].properties['parent'] = current_node
+                        self.nodes_to_check.append(current_node.properties['neighbors'][i])
+                        x = current_node.properties['neighbors'][i].center_x // (NODE_WIDTH + MARGIN_X)
+                        y = current_node.properties['neighbors'][i].center_y // (NODE_HEIGHT + MARGIN_Y)
+                        self.grid_nodes[y][x] = 4
+                    self.nodes_to_check.sort(key=lambda x: x.properties['dist_to_target'])
+            self.on_draw()
+            
+            # Check if the target node is a neighbor
+            if self.target_node in self.nodes_to_check:
+                # Set target node color back to red
+                self.grid_nodes[self.target_node_row][self.target_node_col] = 3
+                # Start trail at node before target
+                node = self.target_node.properties['parent']
+                while not node is self.start_node:
+                    x = node.center_x // (NODE_WIDTH + MARGIN_X)
+                    y = node.center_y // (NODE_HEIGHT + MARGIN_Y)
+                    self.grid_nodes[y][x] = 5
+                    node = node.properties['parent']
+                    self.on_draw()
+                target_reached = True
+                break
+            # Check if we've run out of nodes
+            elif len(self.nodes_to_check) == 0:
+                self.grid_nodes[self.target_node_row][self.target_node_col] = 7
+                self.grid_nodes[self.start_node_row][self.start_node_col] = 7
+                break
+            
+            self.done_list.append(current_node)
+            for node in self.nodes_to_check:
+                x_coor = ((node.center_x) // (NODE_WIDTH + MARGIN_X))
+                y_coor = ((node.center_y) // (NODE_HEIGHT + MARGIN_Y))
+                self.grid_nodes[y_coor][x_coor] = 6
+            self.on_draw()
+            current_node = self.nodes_to_check[0]
+            self.nodes_to_check.remove(self.nodes_to_check[0])
+            
 
 # Basic enter screen for view practice and ego boosting
 class StartView(arcade.View):
@@ -380,6 +483,18 @@ class StartView(arcade.View):
     def on_key_press(self, key: int, modifiers: int):
         if key == arcade.key.ESCAPE:
             arcade.exit()
+
+
+class InstructionView(arcade.Section):
+    def on_draw(self):
+        arcade.draw_lrtb_rectangle_filled(self.left, self.right, self.top, self.bottom,
+                                          arcade.color.BLACK)
+        arcade.draw_lrtb_rectangle_outline(self.left, self.right, self.top, self.bottom,
+                                          arcade.color.WHITE)
+        arcade.draw_rectangle_filled(self.left + (NODE_WIDTH//2), self.top - (NODE_HEIGHT//2),
+                                     NODE_WIDTH, NODE_HEIGHT, arcade.color.BLUE)
+    
+    
 
 def main():
     win = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
