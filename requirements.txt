@@ -1,0 +1,17 @@
+arcade==2.6.17
+attrs==23.1.0
+certifi==2023.5.7
+cffi==1.15.1
+charset-normalizer==3.1.0
+docopt==0.6.2
+idna==3.4
+Pillow==9.3.0
+pipreqs==0.4.13
+pycparser==2.21
+pyglet==2.0.dev23
+pymunk==6.4.0
+pytiled-parser==2.2.0
+requests==2.31.0
+typing_extensions==4.6.2
+urllib3==2.0.2
+yarg==0.1.9
